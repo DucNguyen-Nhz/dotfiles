@@ -13,9 +13,16 @@ return {
 
 		local on_attach = function(_, bufnr)
 			local opts = { buffer = bufnr, silent = true }
-			vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
-			vim.keymap.set("n", "gr", vim.lsp.buf.reference, opts)
-			vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+			vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+			vim.keymap.set("n", "gr", function() vim.lsp.buf.reference() end, opts)
+			vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
+
+			vim.api.nvim_create_autocmd("BufWritePre", {
+				buffer = bufnr,
+				callback = function()
+					vim.lsp.buf.format()
+				end,
+			})
 		end
 
 		lspconfig.pyright.setup({
