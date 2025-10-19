@@ -28,6 +28,11 @@ return {
 		lspconfig.pyright.setup({
 			capabilities = capabilities,
 			on_attach = on_attach,
+			inlayHints = {
+				variableTypes = true,
+				functionReturnTypes = true,
+				parameterTypes = true
+			}
 		})
 		
 		lspconfig.ts_ls.setup({
