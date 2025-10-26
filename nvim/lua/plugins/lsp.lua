@@ -1,7 +1,6 @@
 return {
 	"neovim/nvim-lspconfig",
 	config = function()
-		local lspconfig = require("lspconfig")
 		local ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
 		if not ok then
 			return
@@ -11,21 +10,31 @@ return {
 
 		capabilities = cmp_nvim_lsp.default_capabilities(capabilities)
 
-		local on_attach = function(_, bufnr)
+		local on_attach = function(client, bufnr)
 			local opts = { buffer = bufnr, silent = true }
 			vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
-			vim.keymap.set("n", "gr", function() vim.lsp.buf.reference() end, opts)
+			vim.keymap.set("n", "gr", function() vim.lsp.buf.references() end, opts)
 			vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
-
-			vim.api.nvim_create_autocmd("BufWritePre", {
-				buffer = bufnr,
-				callback = function()
-					vim.lsp.buf.format()
-				end,
-			})
+			
+			if client.name == "gopls" then
+				vim.api.nvim_create_autocmd("BufWritePre", {
+					group = vim.api.nvim_create_augroup("GoFormat", { clear = true }),
+					buffer = bufnr,
+					callback = function()
+						vim.lsp.buf.format()
+					end,
+				})
+			else
+				vim.api.nvim_create_autocmd("BufWritePre", {
+					buffer = bufnr,
+					callback = function()
+						vim.lsp.buf.format()
+					end,
+				})
+			end
 		end
 
-		lspconfig.pyright.setup({
+		vim.lsp.config("pyright", {
 			capabilities = capabilities,
 			on_attach = on_attach,
 			inlayHints = {
@@ -35,12 +44,12 @@ return {
 			}
 		})
 		
-		lspconfig.ts_ls.setup({
+		vim.lsp.config("ts_ls", {
 			capabilities = capabilities,
 			on_attach = on_attach,
 		})
 		
-		lspconfig.gopls.setup({
+		vim.lsp.config("gopls", {
 			capabilities = capabilities,
 			on_attach = on_attach,
 			settings = {
@@ -50,6 +59,8 @@ return {
 				}
 			}
 		})
+		
+		vim.lsp.enable({"pyright", "gopls", "ts_ls"})
 
 	end,
 }
