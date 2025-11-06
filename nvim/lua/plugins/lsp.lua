@@ -12,16 +12,18 @@ return {
 
 		local on_attach = function(client, bufnr)
 			local opts = { buffer = bufnr, silent = true }
-			vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
-			vim.keymap.set("n", "gr", function() vim.lsp.buf.references() end, opts)
-			vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
-			
+			vim.keymap.set("n", "gd", vim.lsp.buf.definition, opts)
+			vim.keymap.set("n", "gr", vim.lsp.buf.references, opts)
+			vim.keymap.set("n", "K", vim.lsp.buf.hover, opts)
+			vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, opts)
+
+
 			if client.name == "gopls" then
 				vim.api.nvim_create_autocmd("BufWritePre", {
 					group = vim.api.nvim_create_augroup("GoFormat", { clear = true }),
 					buffer = bufnr,
 					callback = function()
-						vim.lsp.buf.format()
+						vim.lsp.buf.format({ async = false })
 					end,
 				})
 			else
