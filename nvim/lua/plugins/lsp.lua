@@ -49,6 +49,11 @@ return {
 		vim.lsp.config("ts_ls", {
 			capabilities = capabilities,
 			on_attach = on_attach,
+			inlayHints = {
+				variableTypes = true,
+				functionReturnTypes = true,
+				parameterTypes = true
+			}
 		})
 		
 		vim.lsp.config("gopls", {
@@ -61,8 +66,18 @@ return {
 				}
 			}
 		})
+
+		vim.lsp.config("clangd", {
+			capabilities = capabilities,
+			on_attach = on_attach,
+			inlayHints = {
+				variableTypes = true,
+				functionReturnTypes = true,
+				parameterTypes = true
+			}
+		})
 		
-		vim.lsp.enable({"pyright", "gopls", "ts_ls"})
+		vim.lsp.enable({"pyright", "gopls", "ts_ls", "clangd"})
 
 	end,
 }
