@@ -18,11 +18,15 @@ return {
 		end
 
 		api.map.on_attach.default(bufnr)
+		vim.keymap.set("n", "<leader>r", function()
+			require("nvim-tree.api").tree.find_file({ open = true })
+		end, { desc = "Reveal file in NvimTree" })
 
 	end
 
     require("nvim-tree").setup {
 		on_attach = on_attach
+
 	}
   end,
 }
