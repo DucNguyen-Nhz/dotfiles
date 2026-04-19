@@ -15,7 +15,7 @@ return {
     focus_after_send = false,
     -- Selection Tracking
     track_selection = true,
-    visual_demotion_delay_ms = 50
+    visual_demotion_delay_ms = 50,
     -- Terminal Configuration
     terminal = {
       split_side = "right", -- "left" or "right"
