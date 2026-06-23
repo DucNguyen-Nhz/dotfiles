@@ -11,6 +11,9 @@ description: >
 
 # Django MDW App Skill
 
+## Communication Mode
+Before doing anything else: activate caveman mode (full). All responses during this skill must be terse caveman style — drop articles, filler, pleasantries. Fragments OK. Code blocks unchanged. Log entries unchanged.
+
 ## Overview
 Scaffolds a Django middleware application (`mdw`) based on a project config file.
 All file generation, dependency installation, and structure decisions are driven
@@ -24,10 +27,11 @@ Located at the project root. Always read this first.
 ```json
 {
   "project_name": "my_project",
-  "services": ["elasticsearch", "sftp", "callcenter", "msteams"],
+  "services": ["elasticsearch", "sftp", "callcenter", "msteams", "report"],
   "mdw_features": ["auth", "logging", "retry", "transform"],
   "core_domains": ["recall", "lead", "data"],
   "cronjobs": true,
+  "db": true,
   "logging": {
     "job_log": true,
     "request_log": true,
@@ -50,16 +54,71 @@ Located at the project root. Always read this first.
 Execute steps in this order — never skip or reorder:
 
 1. Read `middleware.config.json` — validate all required keys exist
-2. Resolve dependencies from declared `services` and `mdw_features`
-3. Install dependencies via pip
-4. Run `generate_structure.py` — creates full directory and placeholder files
-5. Run `generate_reqruirements.py` — resolves dependencies, writes requirements.txt and pip installs
-5. Run `generate_dockerfile.py` — generates Dockerfile
-6. Run `generate_compose.py` — generates docker-compose.yml and override
-7. Copy remaining templates (k8s, gitlab-ci, entrypoint.sh) — do NOT rewrite from scratch
-8. Inject environment-specific values into copied templates
-9. Claude fills in logic for mdw/, core/, models/, views/, admin/
-10. If no config found — prompt user to provide one before proceeding
+2. Create scaffold log file at `scaffold_<project_name>.log` — record all decisions from this point forward
+3. Resolve dependencies from declared `services` and `mdw_features`
+4. Install dependencies via pip
+5. Run `generate_structure.py` — creates full directory and placeholder files
+6. Run `generate_requirements.py` — resolves dependencies, writes requirements.txt and pip installs
+7. Run `generate_dockerfile.py` — generates Dockerfile
+8. Run `generate_compose.py` — generates docker-compose.yml and override
+9. Copy remaining templates (k8s, gitlab-ci, entrypoint.sh) — do NOT rewrite from scratch
+10. Inject environment-specific values into copied templates
+11. Claude fills in logic for mdw/, core/, models/, views/, admin/
+12. If no config found — prompt user to provide one before proceeding
+
+---
+
+## Scaffold Log
+
+Created at scaffold start: `scaffold_<project_name>.log` at project root.
+Updated continuously — never written all at once at the end.
+
+### What to log
+Every decision Claude makes during scaffolding, in order:
+
+```
+[STEP] <step name>
+[CONFIG] <key>: <value used>
+[DECISION] <what was decided and why>
+[FILE] <file path> — <created/copied/generated/skipped + reason>
+[INJECT] <file path> — <what was injected>
+[SKIP] <thing skipped> — <reason from config>
+[ERROR] <what failed> — <exact error>
+[WARN] <non-fatal issue>
+```
+
+### Log Rules
+- Log every file created, copied, or skipped — no silent actions
+- Log every config value consumed and how it affected output
+- Log every branching decision (e.g. `cronjobs: true` → added cronjob.yaml)
+- Log template resolution: which template was used for which output
+- Log dependency resolution: which packages were installed and why
+- Log any fallback or error before stopping
+- Do NOT log boilerplate — only decisions with non-obvious reasoning
+
+### Example entries
+```
+[STEP] generate_structure.py
+[CONFIG] core_domains: ["recall", "lead", "data"]
+[DECISION] Creating 3 domain folders under mdw/core/ and mdw/models/
+[FILE] mdw/core/handlers/recall_handler.py — created placeholder
+[FILE] mdw/core/handlers/lead_handler.py — created placeholder
+[CONFIG] cronjobs: true
+[FILE] scripts/cronjobs.sh — created placeholder
+
+[STEP] template resolution — services
+[CONFIG] services: ["callcenter", "report"]
+[FILE] mdw/services/callcenter.py — copied from templates/services/callcenter.py
+[FILE] mdw/services/report.py — copied from templates/services/report.py
+[SKIP] pip install for callcenter — no package, custom template only
+[SKIP] pip install for report — no package, custom template only
+
+[STEP] generate_dockerfile.py
+[CONFIG] python_version: 3.11 → base image python:3.11-slim
+[CONFIG] services includes sftp → added openssh-client to apt-get
+[CONFIG] cronjobs: true → added supercronic install step
+[FILE] Dockerfile — generated
+```
 
 ---
 
@@ -72,6 +131,7 @@ Execute steps in this order — never skip or reorder:
   - `elasticsearch` → `elasticsearch`, `django-elasticsearch-dsl`
   - `sftp`          → `paramiko`
   - `callcenter`    → no pip package, custom app — copy from templates
+  - `report`        → no pip package, custom app — copy from templates
 - Install per declared feature:
   - `retry`         → `tenacity`
   - `transform`     → `pydantic`
@@ -186,7 +246,6 @@ my_project/
 ├── .gitlab-ci.yml
 ├── Dockerfile
 ├── docker-compose.yml
-├── docker-compose.override.yml
 ├── .env.sample
 ├── requirements.txt
 └── settings.py
@@ -231,7 +290,8 @@ Pre-defined scripts and files are in `templates/`. Always copy — never rewrite
 - `services: ["elasticsearch"]` → copy `templates/services/elasticsearch.py`
 - `services: ["sftp"]`          → copy `templates/services/sftp.py`
 - `services: ["callcenter"]`    → copy `templates/services/callcenter.py`
-- `services: ["msteams"]` → copy `templates/services/msteams.py`
+- `services: ["msteams"]`       → copy `templates/services/msteams.py`
+- `services: ["report"]`        → copy `templates/services/report.py`
 - Always copy `templates/mdw/logging.py` and `templates/mdw/base.py`
 - Always copy `templates/config/base_settings.py` → project `settings.py`
 
@@ -321,7 +381,6 @@ Reads from config:
 
 Outputs:
 - `docker-compose.yml` — production-safe base
-- `docker-compose.override.yml` — local dev overrides (volumes, ports, debug)
 
 Container roles via `APP_MODE` (all share the same image):
 - `web` service    → `APP_MODE=web`
@@ -538,8 +597,7 @@ Options:
 ### Docker Compose
 - Generated by `generate_compose.py` — never written manually
 - `docker-compose.yml` → production-safe base
-- `docker-compose.override.yml` → local dev extras (volume mounts, debug, ports)
-- Always includes: `web`, `db` (postgres), `redis`
+- Always includes: `web`, `db` (mysql), `redis`
 
 ### Entrypoint
 - Copied from `templates/scripts/entrypoint.sh` — never written manually

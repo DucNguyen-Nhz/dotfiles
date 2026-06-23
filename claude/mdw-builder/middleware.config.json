@@ -1,0 +1,21 @@
+{
+  "project_name": "test_vb_mdw",
+  "services": ["elasticsearch", "sftp", "callcenter", "msteams", "report"],
+  "mdw_features": ["auth", "logging", "retry", "transform"],
+  "core_domains": ["recall", "lead", "data"],
+  "cronjobs": true,
+  "db": true,
+  "logging": {
+    "job_log": true,
+    "request_log": true,
+    "sanitize_fields": ["authorization", "x-api-key", "token", "password"]
+  },
+  "admin": {
+    "date_range_filter": true,
+    "exact_date_filter": true,
+    "dedupe_action": true,
+    "dedupe_fields": ["email", "phone"]
+  },
+  "django_version": "latest",
+  "python_version": "3.11"
+}
