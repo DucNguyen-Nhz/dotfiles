@@ -9,7 +9,7 @@ return {
 		dependencies = { "williamboman/mason.nvim" },
 		config = function()
 			require("mason-lspconfig").setup({
-				ensure_installed = { "pyright", "ts_ls", "gopls", "tailwindcss", "clangd" }
+				ensure_installed = { "pyright", "ts_ls", "gopls", "tailwindcss", "clangd", "vue_ls" }
 			})
 		end,
 	}

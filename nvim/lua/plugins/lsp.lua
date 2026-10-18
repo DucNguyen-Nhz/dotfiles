@@ -46,14 +46,27 @@ return {
 			}
 		})
 		
+		local vue_plugin_path = vim.fn.stdpath("data")
+			.. "/mason/packages/vue-language-server/node_modules/@vue/language-server"
+
 		vim.lsp.config("ts_ls", {
 			capabilities = capabilities,
 			on_attach = on_attach,
-			inlayHints = {
-				variableTypes = true,
-				functionReturnTypes = true,
-				parameterTypes = true
-			}
+			init_options = {
+				plugins = {
+					{
+						name = "@vue/typescript-plugin",
+						location = vue_plugin_path,
+						languages = { "vue" },
+					},
+				},
+			},
+			filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact", "vue" },
+		})
+
+		vim.lsp.config("vue_ls", {
+			capabilities = capabilities,
+			on_attach = on_attach,
 		})
 		
 		vim.lsp.config("gopls", {
@@ -77,7 +90,7 @@ return {
 			}
 		})
 		
-		vim.lsp.enable({"pyright", "gopls", "ts_ls", "clangd"})
+		vim.lsp.enable({"pyright", "gopls", "ts_ls", "clangd", "vue_ls"})
 
 	end,
 }

@@ -1,53 +1,41 @@
 return {
   "nvim-treesitter/nvim-treesitter",
+  branch = "main",
+  lazy = false,
   build = ":TSUpdate",
   config = function()
-    require("nvim-treesitter.configs").setup({
-      -- A list of parser names, or "all"
-      ensure_installed = {
-        "vimdoc",
-        "javascript",
-        "typescript",
-        "glsl",
-        "lua",
-        "jsdoc",
-        "bash",
-        "python",
-        "go"
-      },
-
-      -- Install parsers synchronously (only applied to `ensure_installed`)
-      sync_install = false,
-
-      -- Automatically install missing parsers when entering buffer
-      -- Recommendation: set to false if you don"t have `tree-sitter` CLI installed locally
-      auto_install = true,
-
-      indent = {
-        enable = true
-      },
-
-      highlight = {
-        -- `false` will disable the whole extension
-        enable = true,
-
-        -- Setting this to true will run `:h syntax` and tree-sitter at the same time.
-        -- Set this to `true` if you depend on "syntax" being enabled (like for indentation).
-        -- Using this option may slow down your editor, and you may see some duplicate highlights.
-        -- Instead of true it can also be a list of languages
-        additional_vim_regex_highlighting = { "markdown" },
-      },
+    local ts = require("nvim-treesitter")
+    ts.install({
+      "vimdoc", "vim", "lua", "bash", "python", "go", "gomod", "gosum",
+      "javascript", "typescript", "tsx", "jsdoc", "vue", "html", "css",
+      "json", "yaml", "toml", "csv", "sql", "markdown", "markdown_inline",
+      "c", "cpp", "d", "glsl", "templ", "make", "dockerfile", "nginx",
+      "gitignore", "requirements", "ssh_config", "udev",
     })
 
-    local treesitter_parser_config = require("nvim-treesitter.parsers").get_parser_configs()
-    treesitter_parser_config.templ = {
-      install_info = {
-        url = "https://github.com/vrischmann/tree-sitter-templ.git",
-        files = { "src/parser.c", "src/scanner.c" },
-        branch = "master",
-      },
-    }
-
-    vim.treesitter.language.register("templ", "templ")
+    -- main branch doesn't auto-enable highlight/indent; start them per buffer
+    vim.api.nvim_create_autocmd("FileType", {
+      callback = function(args)
+        -- Replaces auto_install: fetch a missing parser, then start once it's built
+        local lang = vim.treesitter.language.get_lang(vim.bo[args.buf].filetype)
+        if lang and vim.tbl_contains(ts.get_available(), lang)
+            and not vim.tbl_contains(ts.get_installed(), lang) then
+          ts.install(lang):await(function()
+            if vim.api.nvim_buf_is_valid(args.buf) then
+              pcall(vim.treesitter.start, args.buf)
+            end
+          end)
+          return
+        end
+        if not pcall(vim.treesitter.start, args.buf) then
+          return
+        end
+        vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        -- Was additional_vim_regex_highlighting = { "markdown" }
+        if vim.bo[args.buf].filetype == "markdown" then
+          vim.bo[args.buf].syntax = "on"
+        end
+      end,
+    })
   end
 }
